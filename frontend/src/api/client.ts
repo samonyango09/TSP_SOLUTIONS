@@ -12,7 +12,9 @@ import type {
   RoutePlanResponse,
 } from "./types";
 
-const BASE_URL = "http://127.0.0.1:8000";
+// Set VITE_API_BASE_URL in the hosting provider's project settings for a
+// deployed build; falls back to the local backend for `npm run dev`.
+const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
 
 // withCredentials so the shared-password session cookie (set by /api/auth/login)
 // is sent on every request - the backend gates every router except /api/auth
