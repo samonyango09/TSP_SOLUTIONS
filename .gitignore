@@ -1,0 +1,31 @@
+# ===== Secrets / credentials =====
+.env
+*.env
+!.env.example
+
+# ===== Python =====
+.venv/
+venv/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+
+# ===== Node =====
+node_modules/
+dist/
+.vite/
+
+# ===== App data / local workspace =====
+backend/workspace/
+
+# ===== Source data dumps (large, copied from Clean Data and Analysis/, regenerable) =====
+data/raw/*.csv
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+
+# ===== Editors =====
+.vscode/
+.idea/
