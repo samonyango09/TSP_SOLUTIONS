@@ -16,17 +16,40 @@ import type {
 // deployed build; falls back to the local backend for `npm run dev`.
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://127.0.0.1:8000";
 
-// withCredentials so the shared-password session cookie (set by /api/auth/login)
-// is sent on every request - the backend gates every router except /api/auth
-// and /api/health behind it.
-const client = axios.create({ baseURL: BASE_URL, withCredentials: true });
+const TOKEN_STORAGE_KEY = "tsp_auth_token";
+
+// Auth is a bearer token (Authorization header), not a cookie - the
+// frontend and backend are deployed on different sites (Vercel/Render),
+// and browsers' third-party-cookie blocking silently drops cross-site
+// cookies even with SameSite=None; Secure set correctly. See app/auth.py's
+// module docstring on the backend for how that was confirmed, not assumed.
+function getToken(): string | null {
+  return localStorage.getItem(TOKEN_STORAGE_KEY);
+}
+
+function setToken(token: string | null): void {
+  if (token) localStorage.setItem(TOKEN_STORAGE_KEY, token);
+  else localStorage.removeItem(TOKEN_STORAGE_KEY);
+}
+
+const client = axios.create({ baseURL: BASE_URL });
+
+client.interceptors.request.use((config) => {
+  const token = getToken();
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
 
 export const api = {
   baseUrl: BASE_URL,
 
   authStatus: () => client.get<AuthStatus>("/api/auth/status").then((r) => r.data),
-  login: (password: string) => client.post<{ authenticated: boolean }>("/api/auth/login", { password }).then((r) => r.data),
-  logout: () => client.post("/api/auth/logout").then((r) => r.data),
+  login: (password: string) =>
+    client.post<{ authenticated: boolean; token?: string }>("/api/auth/login", { password }).then((r) => {
+      setToken(r.data.token ?? null);
+      return r.data;
+    }),
+  logout: () => setToken(null),
 
   listOutlets: (params: { type?: OutletType; county?: string; limit?: number; offset?: number }) =>
     client.get<Outlet[]>("/api/outlets", { params }).then((r) => r.data),

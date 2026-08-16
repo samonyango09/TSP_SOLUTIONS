@@ -8,12 +8,15 @@ app = FastAPI(title="TSP Solutions - Pharma Sales System")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173", "https://tsp-solutions.vercel.app"],
-    # Vercel gives every deploy its own preview URL (a random hash per
-    # build, e.g. tsp-solutions-me5tr8uzv-tsp-pharma.vercel.app) in addition
-    # to the stable production domain above - a regex covers those without
-    # needing a backend redeploy every time a new preview URL is generated.
-    allow_origin_regex=r"https://tsp-solutions-[a-z0-9]+-tsp-pharma\.vercel\.app",
+    allow_origins=["https://tsp-solutions.vercel.app"],
+    # Two things a plain allow_origins list can't express, covered by regex:
+    # - Vite falls back to the next free port (5174, 5175, ...) if 5173 is
+    #   already taken by another local process, so local dev origins are
+    #   matched by port range rather than one hardcoded port.
+    # - Vercel gives every deploy its own preview URL (a random hash per
+    #   build, e.g. tsp-solutions-me5tr8uzv-tsp-pharma.vercel.app) in
+    #   addition to the stable production domain above.
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1):517\d|https://tsp-solutions-[a-z0-9]+-tsp-pharma\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
