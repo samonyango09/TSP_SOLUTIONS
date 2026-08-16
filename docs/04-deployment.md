@@ -16,18 +16,32 @@ the traffic levels this app expects (~10k users, first year).
 
 ## 1. Database: Neon or Supabase (free Postgres)
 
-1. Create a project, grab the connection string it gives you (`postgres://user:pass@host/dbname`).
-2. Set that as `DATABASE_URL` wherever the backend runs (step 2 below). `app/config.py`'s
-   `sqlalchemy_url` property normalizes `postgres://`/`postgresql://` into the
-   `postgresql+psycopg://` form SQLAlchemy needs automatically - just set the plain connection
-   string, nothing else to translate by hand.
-3. From your machine, with `DATABASE_URL` set to that connection string, run the ETL once against
+1. Create a project.
+2. **If using Supabase, this step matters**: Supabase's "Direct connection" host
+   (`db.<ref>.supabase.co`) and its "Dedicated pooler" are both **IPv6-only by default** - they
+   won't resolve at all from an IPv4-only network, which includes Render's outbound networking and,
+   confirmed while setting this up, this dev sandbox too. Use the **Shared Pooler** connection
+   string instead (Supabase dashboard -> Connect -> connection-type dropdown -> "Shared Pooler"),
+   which works over plain IPv4 for free (the "Dedicated IPv4 address" add-on is a $4/mo option you
+   don't need). It looks like:
+   `postgresql://postgres.<project-ref>:[password]@aws-<n>-<region>.pooler.supabase.com:5432/postgres`.
+   Neon's default connection string doesn't have this issue.
+3. Set that connection string as `DATABASE_URL` wherever the backend runs (step 2 below).
+   `app/config.py`'s `sqlalchemy_url` property normalizes `postgres://`/`postgresql://` into the
+   `postgresql+psycopg://` form SQLAlchemy needs automatically. If the password contains characters
+   like `?`, `&`, or `#`, set it as-is (unescaped) when it's a plain environment variable (e.g. in
+   Render's dashboard, or exported in a shell) - psycopg parses it directly as a connection string,
+   not as a browser URL, so those characters don't need percent-encoding there. They *would* need
+   percent-encoding only if you were pasting the URL somewhere that parses it as an actual URL
+   (browser address bar, `curl` on some shells where the shell itself treats those characters
+   specially - quote the whole string).
+4. From your machine, with `DATABASE_URL` set to that connection string, run the ETL once against
    it to populate the tables:
    ```bash
    cd backend
-   DATABASE_URL="postgres://..." ./.venv/Scripts/python -m app.etl.run_all
+   DATABASE_URL="postgresql://..." ./.venv/Scripts/python -m app.etl.run_all
    ```
-   (On Windows PowerShell: `$env:DATABASE_URL="postgres://..."; ./.venv/Scripts/python -m app.etl.run_all`)
+   (On Windows PowerShell: `$env:DATABASE_URL="postgresql://..."; ./.venv/Scripts/python -m app.etl.run_all`)
 
 ## 2. Backend: Render or Fly.io
 
