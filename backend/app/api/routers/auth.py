@@ -28,7 +28,15 @@ def login(payload: LoginRequest, response: Response) -> dict:
         _COOKIE_NAME,
         make_session_token(),
         httponly=True,
-        samesite="lax",
+        # The frontend (Vercel) and backend (Render) are on different sites,
+        # not just different ports - a "lax" cookie is only sent on same-site
+        # requests and top-level navigations, so it silently never reaches
+        # the backend on the fetch/XHR calls the frontend actually makes.
+        # "none" is required for any cross-site deployment; it in turn
+        # requires `secure=True` (HTTPS), which both Vercel and Render give
+        # by default, so this is safe to hardcode rather than branch on env.
+        samesite="none",
+        secure=True,
         max_age=60 * 60 * 24 * 30,
     )
     return {"authenticated": True}
@@ -36,5 +44,5 @@ def login(payload: LoginRequest, response: Response) -> dict:
 
 @router.post("/logout")
 def logout(response: Response) -> dict:
-    response.delete_cookie(_COOKIE_NAME)
+    response.delete_cookie(_COOKIE_NAME, samesite="none", secure=True)
     return {"authenticated": False}

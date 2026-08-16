@@ -100,3 +100,13 @@ Every router except `auth` and `/api/health` is gated by `Depends(require_sessio
 (`APP_PASSWORD`). If that env var is unset, auth is a no-op (every request passes) so local
 development doesn't need a login step. See `00-discovery-and-design.md` and
 `04-deployment.md` for why this is appropriate for now and what to upgrade to later.
+
+**Cookie attributes matter here more than they'd first appear to.** The frontend (Vercel) and
+backend (Render) are deployed on different sites, so the session cookie is set with
+`samesite="none"; secure=True` in `api/routers/auth.py`. This was found the hard way: with the more
+common `samesite="lax"`, login itself succeeds (the browser accepts the `Set-Cookie` from the same
+response it's already looking at), but the cookie is then silently *not* attached to any of the
+frontend's subsequent cross-site `fetch()` calls to the backend - every authenticated request after
+login fails with 401, even though login "worked." `secure=True` requires HTTPS, which is why this
+would break local HTTP testing if `APP_PASSWORD` were ever set there - it isn't, by default, for
+exactly this reason.
